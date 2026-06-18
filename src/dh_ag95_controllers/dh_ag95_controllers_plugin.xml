@@ -1,0 +1,5 @@
+<library path="dh_ag95_controllers">
+  <class name="dh_ag95_controllers/DhAg95Hardware" type="dh_ag95_controllers::DhAg95Hardware" base_class_type="hardware_interface::ActuatorInterface">
+    <description>DH-Robotics AG-95 ros2_control actuator interface.</description>
+  </class>
+</library>

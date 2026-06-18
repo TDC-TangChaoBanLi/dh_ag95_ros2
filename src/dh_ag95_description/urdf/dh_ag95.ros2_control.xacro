@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!-- Pure ros2_control definition macro, no visual/collision geometry. -->
+  <xacro:macro name="dh_ag95_ros2_control" params="name:=dh_ag95 prefix:=dh_ag95 gripper_id:=1 transport_type:=official_serial port:=/dev/ttyACM0 baudrate:=115200 can_interface:=can0 can_bitrate:=500000 pcan_channel:=PCAN_USBBUS1 pcan_bitrate:=500000 command_unit:=normalized auto_initialize:=true default_force_percent:=30">
+    <ros2_control name="${name}_hardware" type="actuator">
+      <hardware>
+        <plugin>dh_ag95_controllers/DhAg95Hardware</plugin>
+        <param name="joint_name">${prefix}_finger_joint</param>
+        <param name="gripper_id">${gripper_id}</param>
+        <param name="transport_type">${transport_type}</param>
+        <param name="port">${port}</param>
+        <param name="baudrate">${baudrate}</param>
+        <param name="can_interface">${can_interface}</param>
+        <param name="can_bitrate">${can_bitrate}</param>
+        <param name="pcan_channel">${pcan_channel}</param>
+        <param name="pcan_bitrate">${pcan_bitrate}</param>
+        <param name="command_interval_ms">30</param>
+        <param name="read_timeout_ms">200</param>
+        <param name="auto_initialize">${auto_initialize}</param>
+        <param name="default_force_percent">${default_force_percent}</param>
+        <param name="command_unit">${command_unit}</param>
+        <param name="stroke_m">0.095</param>
+        <param name="invert_position">false</param>
+        <param name="write_deadband">0.01</param>
+      </hardware>
+      <joint name="${prefix}_finger_joint">
+        <command_interface name="position"/>
+        <command_interface name="effort"/>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+        <state_interface name="effort"/>
+      </joint>
+    </ros2_control>
+  </xacro:macro>
+</robot>

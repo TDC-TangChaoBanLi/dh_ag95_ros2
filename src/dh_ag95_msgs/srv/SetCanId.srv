@@ -1,0 +1,6 @@
+uint8 new_id
+bool use_broadcast_id
+bool confirm
+---
+bool success
+string message

@@ -1,0 +1,6 @@
+float64 force_percent
+uint8 sub_function
+---
+bool success
+string message
+dh_ag95_msgs/State state

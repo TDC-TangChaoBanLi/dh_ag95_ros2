@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<robot name="dh_ag95_controlled" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:arg name="prefix" default="dh_ag95"/>
+  <xacro:arg name="transport_type" default="official_serial"/>
+  <xacro:arg name="port" default="/dev/ttyACM0"/>
+  <xacro:arg name="baudrate" default="115200"/>
+  <xacro:arg name="can_interface" default="can0"/>
+  <xacro:arg name="can_bitrate" default="500000"/>
+  <xacro:arg name="pcan_channel" default="PCAN_USBBUS1"/>
+  <xacro:arg name="pcan_bitrate" default="500000"/>
+  <xacro:arg name="gripper_id" default="1"/>
+  <xacro:arg name="command_unit" default="normalized"/>
+
+  <link name="world"/>
+  <xacro:include filename="$(find-pkg-share dh_ag95_description)/urdf/dh_ag95_macro.urdf.xacro"/>
+  <xacro:include filename="$(find-pkg-share dh_ag95_description)/urdf/dh_ag95.ros2_control.xacro"/>
+
+  <xacro:dh_ag95_gripper prefix="$(arg prefix)" parent="world">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </xacro:dh_ag95_gripper>
+
+  <xacro:dh_ag95_ros2_control
+    name="$(arg prefix)"
+    prefix="$(arg prefix)"
+    gripper_id="$(arg gripper_id)"
+    transport_type="$(arg transport_type)"
+    port="$(arg port)"
+    baudrate="$(arg baudrate)"
+    can_interface="$(arg can_interface)"
+    can_bitrate="$(arg can_bitrate)"
+    pcan_channel="$(arg pcan_channel)"
+    pcan_bitrate="$(arg pcan_bitrate)"
+    command_unit="$(arg command_unit)"/>
+</robot>

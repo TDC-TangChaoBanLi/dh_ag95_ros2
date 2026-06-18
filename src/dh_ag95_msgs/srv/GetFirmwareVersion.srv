@@ -1,0 +1,9 @@
+---
+bool success
+string message
+uint32 raw
+uint8 b0
+uint8 b1
+uint8 b2
+uint8 b3
+string version_string

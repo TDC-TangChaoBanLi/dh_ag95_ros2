@@ -1,0 +1,10 @@
+std_msgs/Header header
+float64 position_percent
+float64 force_internal_percent
+float64 force_external_percent
+int32 raw_status
+bool initialized
+bool moving
+bool reached
+bool grasped
+string status_text

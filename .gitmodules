@@ -1,0 +1,3 @@
+[submodule "third_party/dh_ag95_driver"]
+	path = third_party/dh_ag95_driver
+	url = https://github.com/TDC-TangChaoBanLi/dh_ag95_driver.git

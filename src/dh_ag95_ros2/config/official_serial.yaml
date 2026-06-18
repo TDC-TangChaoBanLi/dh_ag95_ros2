@@ -1,0 +1,19 @@
+dh_ag95_node:
+  ros__parameters:
+    topic_prefix: dh_ag95
+    service_prefix: dh_ag95
+    state_topic: ""
+    command_topic: ""
+    drop_event_topic: ""
+    action_name: ""
+    gripper_id: 1
+    transport_type: official_serial
+    port: /dev/ttyACM0
+    baudrate: 115200
+    pcan_channel: PCAN_USBBUS1
+    pcan_bitrate: 500000
+    command_interval_ms: 30
+    read_timeout_ms: 200
+    auto_initialize: true
+    default_force_percent: 30
+    feedback_rate_hz: 20.0

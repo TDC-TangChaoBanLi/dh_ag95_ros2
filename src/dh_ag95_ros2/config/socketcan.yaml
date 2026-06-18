@@ -1,0 +1,15 @@
+dh_ag95_node:
+  ros__parameters:
+    topic_prefix: dh_ag95
+    service_prefix: dh_ag95
+    gripper_id: 1
+    transport_type: socketcan
+    can_interface: can0
+    can_bitrate: 500000
+    pcan_channel: PCAN_USBBUS1
+    pcan_bitrate: 500000
+    command_interval_ms: 30
+    read_timeout_ms: 200
+    auto_initialize: true
+    default_force_percent: 30
+    feedback_rate_hz: 20.0

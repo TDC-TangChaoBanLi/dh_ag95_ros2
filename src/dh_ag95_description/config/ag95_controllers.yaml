@@ -1,0 +1,14 @@
+controller_manager:
+  ros__parameters:
+    update_rate: 50
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    dh_ag95_gripper_controller:
+      type: position_controllers/GripperActionController
+
+dh_ag95_gripper_controller:
+  ros__parameters:
+    joint: dh_ag95_finger_joint
+    action_monitor_rate: 20.0

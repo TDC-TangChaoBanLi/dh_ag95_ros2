@@ -1,0 +1,4 @@
+---
+bool success
+string message
+dh_ag95_msgs/State state

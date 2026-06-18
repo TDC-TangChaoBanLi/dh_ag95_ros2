@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>dh_ag95_description</name>
+  <version>0.2.0</version>
+  <description>URDF/Xacro description and launch files for DH-Robotics AG-95 gripper.</description>
+  <maintainer email="lihao_0630@qq.com">tdc</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <exec_depend>joint_state_publisher_gui</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>rviz2</exec_depend>
+  <exec_depend>xacro</exec_depend>
+  <exec_depend>controller_manager</exec_depend>
+  <exec_depend>joint_state_broadcaster</exec_depend>
+  <exec_depend>position_controllers</exec_depend>
+  <exec_depend>dh_ag95_controllers</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
