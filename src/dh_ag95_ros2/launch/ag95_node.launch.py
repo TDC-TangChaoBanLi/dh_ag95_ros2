@@ -31,7 +31,7 @@ def _launch_setup(context, *args, **kwargs):
         'default_force_percent': ParameterValue(LaunchConfiguration('default_force_percent'), value_type=int),
         'feedback_rate_hz': ParameterValue(LaunchConfiguration('feedback_rate_hz'), value_type=float),
     }
-    parameters = [config_file, inline_params] if use_config_file else [inline_params]
+    parameters = [config_file] if use_config_file else [inline_params]
 
     return [
         Node(

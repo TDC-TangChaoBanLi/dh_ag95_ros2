@@ -12,14 +12,16 @@ find_package(rclcpp REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 
 if(NOT TARGET dh_ag95_core)
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/dh_ag95_core_driver ${CMAKE_CURRENT_BINARY_DIR}/dh_ag95_core_driver)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/dh_ag95_driver ${CMAKE_CURRENT_BINARY_DIR}/dh_ag95_core_driver)
 endif()
 
 add_library(dh_ag95_controllers SHARED src/dh_ag95_hardware.cpp)
 target_include_directories(dh_ag95_controllers PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
-  ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/dh_ag95_core_driver/include
+)
+target_include_directories(dh_ag95_controllers PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/dh_ag95_driver/include
 )
 target_link_libraries(dh_ag95_controllers dh_ag95_core)
 ament_target_dependencies(dh_ag95_controllers hardware_interface pluginlib rclcpp rclcpp_lifecycle)

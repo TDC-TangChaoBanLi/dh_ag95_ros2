@@ -2,13 +2,13 @@
 
 ROS2 driver stack for DH-Robotics AG-95.
 
-This repository is intended to use `dh_ag95_core_driver` as a Git submodule under:
+This repository is intended to use `dh_ag95_driver` as a Git submodule under:
 
 ```text
-third_party/dh_ag95_core_driver
+third_party/dh_ag95_driver
 ```
 
-The zip already contains a full copy of `dh_ag95_core_driver` so it can be built immediately. For GitHub, replace the folder with a submodule if desired.
+The zip already contains a full copy of `dh_ag95_river` so it can be built immediately. For GitHub, replace the folder with a submodule if desired.
 
 ## Packages
 

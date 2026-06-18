@@ -12,14 +12,14 @@ find_package(std_msgs REQUIRED)
 find_package(dh_ag95_msgs REQUIRED)
 
 if(NOT TARGET dh_ag95_core)
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/dh_ag95_core_driver ${CMAKE_CURRENT_BINARY_DIR}/dh_ag95_core_driver)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/dh_ag95_driver ${CMAKE_CURRENT_BINARY_DIR}/dh_ag95_core_driver)
 endif()
 
 add_executable(dh_ag95_node src/ag95_node.cpp)
 target_link_libraries(dh_ag95_node dh_ag95_core)
 ament_target_dependencies(dh_ag95_node rclcpp rclcpp_action std_msgs dh_ag95_msgs)
 
-target_include_directories(dh_ag95_node PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/dh_ag95_core_driver/include)
+target_include_directories(dh_ag95_node PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/dh_ag95_driver/include)
 
 install(TARGETS dh_ag95_node DESTINATION lib/${PROJECT_NAME})
 install(DIRECTORY launch config DESTINATION share/${PROJECT_NAME})

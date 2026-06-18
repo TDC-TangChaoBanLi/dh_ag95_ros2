@@ -12,8 +12,8 @@
   <xacro:arg name="command_unit" default="normalized"/>
 
   <link name="world"/>
-  <xacro:include filename="$(find-pkg-share dh_ag95_description)/urdf/dh_ag95_macro.urdf.xacro"/>
-  <xacro:include filename="$(find-pkg-share dh_ag95_description)/urdf/dh_ag95.ros2_control.xacro"/>
+  <xacro:include filename="$(find dh_ag95_description)/urdf/dh_ag95_macro.urdf.xacro"/>
+  <xacro:include filename="$(find dh_ag95_description)/urdf/dh_ag95.ros2_control.xacro"/>
 
   <xacro:dh_ag95_gripper prefix="$(arg prefix)" parent="world">
     <origin xyz="0 0 0" rpy="0 0 0"/>

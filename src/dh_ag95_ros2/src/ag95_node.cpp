@@ -79,9 +79,17 @@ class Ag95Node : public rclcpp::Node {
     try {
       gripper_->connect();
       RCLCPP_INFO(get_logger(), "Connected AG-95 using transport '%s'", this->get_parameter("transport_type").as_string().c_str());
-      if (this->get_parameter("auto_initialize").as_bool()) gripper_->initialize(true);
     } catch (const std::exception& e) {
       RCLCPP_ERROR(get_logger(), "Failed to connect AG-95: %s", e.what());
+    }
+
+    if (this->get_parameter("auto_initialize").as_bool()) {
+      try {
+        gripper_->initialize(true);
+        RCLCPP_INFO(get_logger(), "AG-95 initialized successfully");
+      } catch (const std::exception& e) {
+        RCLCPP_WARN(get_logger(), "AG-95 auto-initialize issue: %s. Node will continue running; call 'initialize' service to retry.", e.what());
+      }
     }
 
     double rate = this->get_parameter("feedback_rate_hz").as_double();
@@ -203,26 +211,26 @@ class Ag95Node : public rclcpp::Node {
   }
 
   void create_services() {
-    services_.push_back(create_service<dh_ag95_msgs::srv::Initialize>(join_name(service_prefix_, "initialize"), [this](auto req, auto resp) {
+    services_.push_back(create_service<dh_ag95_msgs::srv::Initialize>(join_name(service_prefix_, "initialize"), [this](const std::shared_ptr<dh_ag95_msgs::srv::Initialize::Request> req, const std::shared_ptr<dh_ag95_msgs::srv::Initialize::Response> resp) {
       try { gripper_->initialize(req->wait, std::chrono::milliseconds(static_cast<int>((req->timeout_sec > 0 ? req->timeout_sec : 3.0) * 1000))); resp->success = true; resp->message = "ok"; resp->state = read_state_msg(); }
       catch (const std::exception& e) { resp->success = false; resp->message = e.what(); }
     }));
-    services_.push_back(create_service<dh_ag95_msgs::srv::SetPosition>(join_name(service_prefix_, "set_position"), [this](auto req, auto resp) {
+    services_.push_back(create_service<dh_ag95_msgs::srv::SetPosition>(join_name(service_prefix_, "set_position"), [this](const std::shared_ptr<dh_ag95_msgs::srv::SetPosition::Request> req, const std::shared_ptr<dh_ag95_msgs::srv::SetPosition::Response> resp) {
       try { gripper_->set_position(static_cast<int>(std::round(req->position_percent))); resp->state = req->wait ? wait_for_done(req->timeout_sec > 0 ? req->timeout_sec : 3.0) : read_state_msg(); resp->success = true; resp->message = "ok"; }
       catch (const std::exception& e) { resp->success = false; resp->message = e.what(); }
     }));
-    services_.push_back(create_service<dh_ag95_msgs::srv::SetForce>(join_name(service_prefix_, "set_force"), [this](auto req, auto resp) {
+    services_.push_back(create_service<dh_ag95_msgs::srv::SetForce>(join_name(service_prefix_, "set_force"), [this](const std::shared_ptr<dh_ag95_msgs::srv::SetForce::Request> req, const std::shared_ptr<dh_ag95_msgs::srv::SetForce::Response> resp) {
       try { uint8_t sub = req->sub_function == 0 ? dh_ag95::kSubForceInternal : req->sub_function; gripper_->set_force(static_cast<int>(std::round(req->force_percent)), sub); resp->state = read_state_msg(); resp->success = true; resp->message = "ok"; }
       catch (const std::exception& e) { resp->success = false; resp->message = e.what(); }
     }));
-    services_.push_back(create_service<dh_ag95_msgs::srv::GetState>(join_name(service_prefix_, "get_state"), [this](auto, auto resp) { try { resp->state = read_state_msg(); resp->success = true; resp->message = "ok"; } catch (const std::exception& e) { resp->success = false; resp->message = e.what(); } }));
-    services_.push_back(create_service<dh_ag95_msgs::srv::GetFirmwareVersion>(join_name(service_prefix_, "get_firmware_version"), [this](auto, auto resp) { try { auto v = gripper_->get_firmware_version(); resp->success = true; resp->message = "ok"; resp->raw = v.raw; resp->b0 = v.b0; resp->b1 = v.b1; resp->b2 = v.b2; resp->b3 = v.b3; resp->version_string = v.to_string(); } catch (const std::exception& e) { resp->success = false; resp->message = e.what(); } }));
-    services_.push_back(create_service<dh_ag95_msgs::srv::SetCanId>(join_name(service_prefix_, "set_can_id"), [this](auto req, auto resp) { try { if (!req->confirm) throw std::runtime_error("confirm must be true because gripper reboot is required"); gripper_->set_can_id(req->new_id, req->use_broadcast_id); resp->success = true; resp->message = "ok; reboot gripper required"; } catch (const std::exception& e) { resp->success = false; resp->message = e.what(); } }));
-    services_.push_back(create_service<dh_ag95_msgs::srv::SetCanBaudrate>(join_name(service_prefix_, "set_can_baudrate"), [this](auto req, auto resp) { try { if (!req->confirm) throw std::runtime_error("confirm must be true because gripper reboot is required"); gripper_->set_can_baudrate(static_cast<dh_ag95::CanBaudRateIndex>(req->index)); resp->success = true; resp->message = "ok; reboot gripper required"; } catch (const std::exception& e) { resp->success = false; resp->message = e.what(); } }));
-    services_.push_back(create_service<dh_ag95_msgs::srv::SetIoMode>(join_name(service_prefix_, "set_io_mode"), [this](auto req, auto resp) { try { gripper_->set_io_mode_enabled(req->enable); resp->success = true; resp->message = "ok"; } catch (const std::exception& e) { resp->success = false; resp->message = e.what(); } }));
-    services_.push_back(create_service<dh_ag95_msgs::srv::SetIoParameter>(join_name(service_prefix_, "set_io_parameter"), [this](auto req, auto resp) { try { gripper_->set_io_parameter(req->sub_function, req->value); resp->success = true; resp->message = "ok"; } catch (const std::exception& e) { resp->success = false; resp->message = e.what(); } }));
-    services_.push_back(create_service<dh_ag95_msgs::srv::SetDropDetection>(join_name(service_prefix_, "set_drop_detection"), [this](auto req, auto resp) { try { gripper_->set_drop_detection_enabled(req->enable); resp->success = true; resp->message = "ok"; } catch (const std::exception& e) { resp->success = false; resp->message = e.what(); } }));
-    services_.push_back(create_service<dh_ag95_msgs::srv::RawRegister>(join_name(service_prefix_, "raw_register"), [this](auto req, auto resp) { try { resp->value = req->write ? gripper_->write_register(req->function, req->sub_function, req->value) : gripper_->read_register(req->function, req->sub_function); resp->success = true; resp->message = "ok"; } catch (const std::exception& e) { resp->success = false; resp->message = e.what(); } }));
+    services_.push_back(create_service<dh_ag95_msgs::srv::GetState>(join_name(service_prefix_, "get_state"), [this](const std::shared_ptr<dh_ag95_msgs::srv::GetState::Request>, const std::shared_ptr<dh_ag95_msgs::srv::GetState::Response> resp) { try { resp->state = read_state_msg(); resp->success = true; resp->message = "ok"; } catch (const std::exception& e) { resp->success = false; resp->message = e.what(); } }));
+    services_.push_back(create_service<dh_ag95_msgs::srv::GetFirmwareVersion>(join_name(service_prefix_, "get_firmware_version"), [this](const std::shared_ptr<dh_ag95_msgs::srv::GetFirmwareVersion::Request>, const std::shared_ptr<dh_ag95_msgs::srv::GetFirmwareVersion::Response> resp) { try { auto v = gripper_->get_firmware_version(); resp->success = true; resp->message = "ok"; resp->raw = v.raw; resp->b0 = v.b0; resp->b1 = v.b1; resp->b2 = v.b2; resp->b3 = v.b3; resp->version_string = v.to_string(); } catch (const std::exception& e) { resp->success = false; resp->message = e.what(); } }));
+    services_.push_back(create_service<dh_ag95_msgs::srv::SetCanId>(join_name(service_prefix_, "set_can_id"), [this](const std::shared_ptr<dh_ag95_msgs::srv::SetCanId::Request> req, const std::shared_ptr<dh_ag95_msgs::srv::SetCanId::Response> resp) { try { if (!req->confirm) throw std::runtime_error("confirm must be true because gripper reboot is required"); gripper_->set_can_id(req->new_id, req->use_broadcast_id); resp->success = true; resp->message = "ok; reboot gripper required"; } catch (const std::exception& e) { resp->success = false; resp->message = e.what(); } }));
+    services_.push_back(create_service<dh_ag95_msgs::srv::SetCanBaudrate>(join_name(service_prefix_, "set_can_baudrate"), [this](const std::shared_ptr<dh_ag95_msgs::srv::SetCanBaudrate::Request> req, const std::shared_ptr<dh_ag95_msgs::srv::SetCanBaudrate::Response> resp) { try { if (!req->confirm) throw std::runtime_error("confirm must be true because gripper reboot is required"); gripper_->set_can_baudrate(static_cast<dh_ag95::CanBaudRateIndex>(req->index)); resp->success = true; resp->message = "ok; reboot gripper required"; } catch (const std::exception& e) { resp->success = false; resp->message = e.what(); } }));
+    services_.push_back(create_service<dh_ag95_msgs::srv::SetIoMode>(join_name(service_prefix_, "set_io_mode"), [this](const std::shared_ptr<dh_ag95_msgs::srv::SetIoMode::Request> req, const std::shared_ptr<dh_ag95_msgs::srv::SetIoMode::Response> resp) { try { gripper_->set_io_mode_enabled(req->enable); resp->success = true; resp->message = "ok"; } catch (const std::exception& e) { resp->success = false; resp->message = e.what(); } }));
+    services_.push_back(create_service<dh_ag95_msgs::srv::SetIoParameter>(join_name(service_prefix_, "set_io_parameter"), [this](const std::shared_ptr<dh_ag95_msgs::srv::SetIoParameter::Request> req, const std::shared_ptr<dh_ag95_msgs::srv::SetIoParameter::Response> resp) { try { gripper_->set_io_parameter(req->sub_function, req->value); resp->success = true; resp->message = "ok"; } catch (const std::exception& e) { resp->success = false; resp->message = e.what(); } }));
+    services_.push_back(create_service<dh_ag95_msgs::srv::SetDropDetection>(join_name(service_prefix_, "set_drop_detection"), [this](const std::shared_ptr<dh_ag95_msgs::srv::SetDropDetection::Request> req, const std::shared_ptr<dh_ag95_msgs::srv::SetDropDetection::Response> resp) { try { gripper_->set_drop_detection_enabled(req->enable); resp->success = true; resp->message = "ok"; } catch (const std::exception& e) { resp->success = false; resp->message = e.what(); } }));
+    services_.push_back(create_service<dh_ag95_msgs::srv::RawRegister>(join_name(service_prefix_, "raw_register"), [this](const std::shared_ptr<dh_ag95_msgs::srv::RawRegister::Request> req, const std::shared_ptr<dh_ag95_msgs::srv::RawRegister::Response> resp) { try { resp->value = req->write ? gripper_->write_register(req->function, req->sub_function, req->value) : gripper_->read_register(req->function, req->sub_function); resp->success = true; resp->message = "ok"; } catch (const std::exception& e) { resp->success = false; resp->message = e.what(); } }));
   }
 
   rclcpp_action::GoalResponse handle_goal(const rclcpp_action::GoalUUID&, std::shared_ptr<const MoveGripper::Goal> goal) {
