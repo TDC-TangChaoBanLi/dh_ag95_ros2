@@ -1,6 +1,8 @@
 <?xml version="1.0"?>
 <robot name="dh_ag95_controlled" xmlns:xacro="http://www.ros.org/wiki/xacro">
-  <xacro:arg name="prefix" default="dh_ag95"/>
+  <xacro:arg name="prefix" default=""/>
+  <xacro:arg name="use_mesh" default="true"/>
+  <xacro:arg name="hardware_name" default="dh_ag95_hardware"/>
   <xacro:arg name="transport_type" default="official_serial"/>
   <xacro:arg name="port" default="/dev/ttyACM0"/>
   <xacro:arg name="baudrate" default="115200"/>
@@ -10,19 +12,29 @@
   <xacro:arg name="pcan_bitrate" default="500000"/>
   <xacro:arg name="gripper_id" default="1"/>
   <xacro:arg name="command_unit" default="normalized"/>
+  <xacro:arg name="stroke_m" default="0.095"/>
+  <xacro:arg name="default_force_percent" default="30"/>
+  <xacro:arg name="auto_initialize" default="true"/>
 
-  <link name="world"/>
   <xacro:include filename="$(find dh_ag95_description)/urdf/dh_ag95_macro.urdf.xacro"/>
   <xacro:include filename="$(find dh_ag95_description)/urdf/dh_ag95.ros2_control.xacro"/>
 
-  <xacro:dh_ag95_gripper prefix="$(arg prefix)" parent="world">
+  <link name="world"/>
+  <link name="$(arg prefix)ag95_mount_link"/>
+  <joint name="$(arg prefix)world_to_ag95_mount" type="fixed">
+    <parent link="world"/>
+    <child link="$(arg prefix)ag95_mount_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <xacro:dh_ag95_gripper prefix="$(arg prefix)" parent="$(arg prefix)ag95_mount_link" use_mesh="$(arg use_mesh)">
     <origin xyz="0 0 0" rpy="0 0 0"/>
   </xacro:dh_ag95_gripper>
 
   <xacro:dh_ag95_ros2_control
-    name="$(arg prefix)"
+    name="$(arg hardware_name)"
     prefix="$(arg prefix)"
-    gripper_id="$(arg gripper_id)"
+    plugin="dh_ag95_controllers/DhAg95Hardware"
     transport_type="$(arg transport_type)"
     port="$(arg port)"
     baudrate="$(arg baudrate)"
@@ -30,5 +42,9 @@
     can_bitrate="$(arg can_bitrate)"
     pcan_channel="$(arg pcan_channel)"
     pcan_bitrate="$(arg pcan_bitrate)"
-    command_unit="$(arg command_unit)"/>
+    gripper_id="$(arg gripper_id)"
+    command_unit="$(arg command_unit)"
+    stroke_m="$(arg stroke_m)"
+    default_force_percent="$(arg default_force_percent)"
+    auto_initialize="$(arg auto_initialize)"/>
 </robot>

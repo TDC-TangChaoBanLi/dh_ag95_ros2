@@ -1,9 +1,18 @@
 <?xml version="1.0"?>
 <robot name="dh_ag95" xmlns:xacro="http://www.ros.org/wiki/xacro">
-  <xacro:arg name="prefix" default="dh_ag95"/>
-  <link name="world"/>
+  <xacro:arg name="prefix" default=""/>
+
   <xacro:include filename="$(find dh_ag95_description)/urdf/dh_ag95_macro.urdf.xacro"/>
-  <xacro:dh_ag95_gripper prefix="$(arg prefix)" parent="world">
+
+  <link name="world"/>
+  <link name="$(arg prefix)ag95_mount_link"/>
+  <joint name="$(arg prefix)world_to_ag95_mount" type="fixed">
+    <parent link="world"/>
+    <child link="$(arg prefix)ag95_mount_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <xacro:dh_ag95_gripper prefix="$(arg prefix)" parent="$(arg prefix)ag95_mount_link">
     <origin xyz="0 0 0" rpy="0 0 0"/>
   </xacro:dh_ag95_gripper>
 </robot>
