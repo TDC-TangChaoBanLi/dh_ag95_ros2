@@ -1,11 +1,10 @@
 <?xml version="1.0"?>
 <robot name="dh_ag95_controlled" xmlns:xacro="http://www.ros.org/wiki/xacro">
   <xacro:arg name="prefix" default=""/>
-  <xacro:arg name="use_mesh" default="true"/>
   <xacro:arg name="hardware_name" default="dh_ag95_hardware"/>
   <xacro:arg name="transport_type" default="official_serial"/>
-  <xacro:arg name="port" default="/dev/ttyACM0"/>
-  <xacro:arg name="baudrate" default="115200"/>
+  <xacro:arg name="serial_port" default="/dev/ttyACM0"/>
+  <xacro:arg name="serial_baudrate" default="115200"/>
   <xacro:arg name="can_interface" default="can0"/>
   <xacro:arg name="can_bitrate" default="500000"/>
   <xacro:arg name="pcan_channel" default="PCAN_USBBUS1"/>
@@ -15,6 +14,8 @@
   <xacro:arg name="stroke_m" default="0.095"/>
   <xacro:arg name="default_force_percent" default="30"/>
   <xacro:arg name="auto_initialize" default="true"/>
+  <xacro:arg name="use_fake_hardware" default="false"/>
+  <xacro:arg name="rw_rate" default="50"/>
 
   <xacro:include filename="$(find dh_ag95_description)/urdf/dh_ag95_macro.urdf.xacro"/>
   <xacro:include filename="$(find dh_ag95_description)/urdf/dh_ag95.ros2_control.xacro"/>
@@ -27,17 +28,17 @@
     <origin xyz="0 0 0" rpy="0 0 0"/>
   </joint>
 
-  <xacro:dh_ag95_gripper prefix="$(arg prefix)" parent="$(arg prefix)ag95_mount_link" use_mesh="$(arg use_mesh)">
+  <xacro:dh_ag95_gripper prefix="$(arg prefix)" parent="$(arg prefix)ag95_mount_link">
     <origin xyz="0 0 0" rpy="0 0 0"/>
   </xacro:dh_ag95_gripper>
 
   <xacro:dh_ag95_ros2_control
-    name="$(arg hardware_name)"
     prefix="$(arg prefix)"
-    plugin="dh_ag95_controllers/DhAg95Hardware"
+    name="$(arg hardware_name)"
+    use_fake_hardware="$(arg use_fake_hardware)"
     transport_type="$(arg transport_type)"
-    port="$(arg port)"
-    baudrate="$(arg baudrate)"
+    serial_port="$(arg serial_port)"
+    serial_baudrate="$(arg serial_baudrate)"
     can_interface="$(arg can_interface)"
     can_bitrate="$(arg can_bitrate)"
     pcan_channel="$(arg pcan_channel)"
@@ -46,5 +47,6 @@
     command_unit="$(arg command_unit)"
     stroke_m="$(arg stroke_m)"
     default_force_percent="$(arg default_force_percent)"
-    auto_initialize="$(arg auto_initialize)"/>
+    auto_initialize="$(arg auto_initialize)"
+    rw_rate="$(arg rw_rate)"/>
 </robot>

@@ -51,10 +51,10 @@ dh_ag95::Ag95Config DhAg95Hardware::make_config_from_info() {
   cfg.read_timeout = std::chrono::milliseconds(param_int("read_timeout_ms", 200));
   cfg.auto_initialize = false;
   cfg.default_force_percent = default_force_percent_;
-  cfg.official_serial.port = param("port", "/dev/ttyACM0");
-  cfg.official_serial.baudrate = param_int("baudrate", 115200);
-  cfg.slcan.port = param("port", "/dev/ttyUSB0");
-  cfg.slcan.serial_baudrate = param_int("baudrate", 115200);
+  cfg.official_serial.port = param("serial_port", "/dev/ttyACM0");
+  cfg.official_serial.baudrate = param_int("serial_baudrate", 115200);
+  cfg.slcan.port = param("serial_port", "/dev/ttyUSB0");
+  cfg.slcan.serial_baudrate = param_int("serial_baudrate", 115200);
   cfg.slcan.can_bitrate = param_int("can_bitrate", 500000);
   cfg.socketcan.interface_name = param("can_interface", "can0");
   cfg.socketcan.bitrate = param_int("can_bitrate", 500000);

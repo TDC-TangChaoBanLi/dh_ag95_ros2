@@ -29,7 +29,7 @@ pluginlib_export_plugin_description_file(hardware_interface dh_ag95_controllers_
 
 install(TARGETS dh_ag95_controllers EXPORT export_dh_ag95_controllers ARCHIVE DESTINATION lib LIBRARY DESTINATION lib RUNTIME DESTINATION bin)
 install(DIRECTORY include/ DESTINATION include)
-install(DIRECTORY config urdf DESTINATION share/${PROJECT_NAME})
+install(DIRECTORY config DESTINATION share/${PROJECT_NAME})
 install(FILES dh_ag95_controllers_plugin.xml DESTINATION share/${PROJECT_NAME})
 ament_export_targets(export_dh_ag95_controllers HAS_LIBRARY_TARGET)
 ament_export_dependencies(hardware_interface pluginlib rclcpp rclcpp_lifecycle)
