@@ -14,6 +14,14 @@
   official_serial: port, baudrate;
   socketcan: can_interface, can_bitrate;
   pcanbasic: pcan_channel, pcan_bitrate.
+
+  gripper_id: can_id.
+  gripper_model: gripper model name, now only support ag-160-95.
+  default_force_percent: default force percent, range [0, 100] percent.
+  auto_initialize: auto initialize the gripper when the controller is started.
+  rw_rate: controller read/write rate in Hz.
+  command_interval_ms: minimum interval between CAN commands (ms).
+  polling_interval_ms: minimum interval between polling states by CAN (ms).
   -->
 
   <xacro:macro name="dh_ag95_ros2_control" params="
@@ -31,8 +39,9 @@
       gripper_model:=ag-160-95
       default_force_percent:=30
       auto_initialize:=true
-      rw_rate:=50
-      command_interval_ms:=10">
+      rw_rate:=30
+      command_interval_ms:=10
+      polling_interval_ms:=50">
 
     <xacro:if value="${use_fake_hardware}">
       <ros2_control name="${name}" type="system">
@@ -81,6 +90,7 @@
           <param name="default_force_percent">${default_force_percent}</param>
           <param name="auto_initialize">${auto_initialize}</param>
           <param name="command_interval_ms">${command_interval_ms}</param>
+          <param name="polling_interval_ms">${polling_interval_ms}</param>
         </hardware>
 
         <joint name="${prefix}gripper_finger1_joint">

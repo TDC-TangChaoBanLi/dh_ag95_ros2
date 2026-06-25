@@ -1,8 +1,10 @@
 #include "dh_ag95_controllers/dh_ag95_hardware.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <stdexcept>
+#include <thread>
 
 #include <hardware_interface/types/hardware_interface_type_values.hpp>
 #include <pluginlib/class_list_macros.hpp>
@@ -19,6 +21,11 @@ dh_ag95::TransportType transport_from_string(const std::string& s) {
 }
 }
 
+DhAg95Hardware::~DhAg95Hardware() {
+  polling_running_.store(false, std::memory_order_relaxed);
+  if (polling_thread_.joinable()) polling_thread_.join();
+}
+
 hardware_interface::CallbackReturn DhAg95Hardware::on_init(const hardware_interface::HardwareInfo& info) {
   if (hardware_interface::ActuatorInterface::on_init(info) != hardware_interface::CallbackReturn::SUCCESS) {
     return hardware_interface::CallbackReturn::ERROR;
@@ -27,6 +34,7 @@ hardware_interface::CallbackReturn DhAg95Hardware::on_init(const hardware_interf
   model_params_ = dh_ag95::get_gripper_params(param("gripper_model", "ag-160-95"));
   write_deadband_ = param_double("write_deadband", 0.005);
   default_force_percent_ = param_int("default_force_percent", 30);
+  polling_interval_ms_ = param_int("polling_interval_ms", 50);
   cmd_effort_ = default_force_percent_;
   gripper_ = std::make_unique<dh_ag95::Ag95Gripper>(make_config_from_info());
   return hardware_interface::CallbackReturn::SUCCESS;
@@ -85,7 +93,14 @@ hardware_interface::CallbackReturn DhAg95Hardware::on_activate(const rclcpp_life
     if (default_force_percent_ > 0) gripper_->set_force(default_force_percent_);
     int pos = gripper_->get_position();
     hw_position_ = dh_ag95::position_percent_to_radians(pos < 0 ? 0.0 : pos, model_params_);
+    cached_position_.store(hw_position_, std::memory_order_relaxed);
+    cached_effort_.store(hw_effort_, std::memory_order_relaxed);
     cmd_position_ = hw_position_;
+
+    // Start background polling thread.
+    polling_running_.store(true, std::memory_order_relaxed);
+    polling_thread_ = std::thread(&DhAg95Hardware::polling_loop, this);
+
     return hardware_interface::CallbackReturn::SUCCESS;
   } catch (const std::exception& e) {
     RCLCPP_ERROR(rclcpp::get_logger("DhAg95Hardware"), "activate failed: %s", e.what());
@@ -94,51 +109,79 @@ hardware_interface::CallbackReturn DhAg95Hardware::on_activate(const rclcpp_life
 }
 
 hardware_interface::CallbackReturn DhAg95Hardware::on_deactivate(const rclcpp_lifecycle::State&) {
+  // Stop polling thread first, then tear down hardware.
+  polling_running_.store(false, std::memory_order_relaxed);
+  if (polling_thread_.joinable()) polling_thread_.join();
   try { gripper_->disconnect(); } catch (...) {}
   return hardware_interface::CallbackReturn::SUCCESS;
 }
 
 hardware_interface::return_type DhAg95Hardware::read(const rclcpp::Time&, const rclcpp::Duration&) {
-  try {
-    // Lightweight read: only position + force (2 CAN transactions vs 5 in get_all_state).
-    int pos_percent = gripper_->get_position();
-    int force_percent = gripper_->get_force();
-
-    double old = hw_position_;
-    hw_position_ = dh_ag95::position_percent_to_radians(
-        pos_percent < 0 ? 0.0 : pos_percent, model_params_);
-    hw_velocity_ = hw_position_ - old;
-    hw_effort_ = dh_ag95::force_percent_to_newtons(
-        static_cast<double>(force_percent < 0 ? 0 : force_percent), model_params_);
-    return hardware_interface::return_type::OK;
-  } catch (const std::exception& e) {
-    RCLCPP_WARN(rclcpp::get_logger("DhAg95Hardware"), "read failed: %s", e.what());
-    return hardware_interface::return_type::ERROR;
-  }
+  // Lock-free: atomic cache populated by background polling_loop().
+  double old = hw_position_;
+  hw_position_ = cached_position_.load(std::memory_order_relaxed);
+  hw_velocity_ = hw_position_ - old;
+  hw_effort_ = cached_effort_.load(std::memory_order_relaxed);
+  return hardware_interface::return_type::OK;
 }
 
 hardware_interface::return_type DhAg95Hardware::write(const rclcpp::Time&, const rclcpp::Duration&) {
+  int force_pct = static_cast<int>(std::round(
+      dh_ag95::force_newtons_to_percent(cmd_effort_, model_params_)));
+  int percent = static_cast<int>(std::round(
+      dh_ag95::position_radians_to_percent(cmd_position_, model_params_)));
+  bool pos_changed = std::abs(cmd_position_ - last_cmd_position_) > write_deadband_;
+  bool force_changed = std::abs(cmd_effort_ - last_cmd_effort_) > 0.5;
+
+  if (!pos_changed && !force_changed) {
+    return hardware_interface::return_type::OK;
+  }
+
+  // try_lock: if the polling thread holds gripper_mutex_, skip this cycle.
+  // The write will be retried next cycle when the values haven't changed yet.
+  std::unique_lock<std::mutex> lock(gripper_mutex_, std::try_to_lock);
+  if (!lock.owns_lock()) {
+    return hardware_interface::return_type::OK;
+  }
+
   try {
-    int force_pct = static_cast<int>(std::round(
-        dh_ag95::force_newtons_to_percent(cmd_effort_, model_params_)));
-    int percent = static_cast<int>(std::round(
-        dh_ag95::position_radians_to_percent(cmd_position_, model_params_)));
-    bool pos_changed = std::abs(cmd_position_ - last_cmd_position_) > write_deadband_;
-    bool force_changed = std::abs(cmd_effort_ - last_cmd_effort_) > 0.5;
-    if (pos_changed || force_changed) {
-      if (force_changed && force_pct >= 20) {
-        gripper_->set_force(force_pct);
-        last_cmd_effort_ = cmd_effort_;
-      }
-      if (pos_changed) {
-        gripper_->set_position(percent);
-        last_cmd_position_ = cmd_position_;
-      }
+    if (force_changed && force_pct >= 20) {
+      gripper_->set_force(force_pct);
+      last_cmd_effort_ = cmd_effort_;
+    }
+    if (pos_changed) {
+      gripper_->set_position(percent);
+      last_cmd_position_ = cmd_position_;
     }
     return hardware_interface::return_type::OK;
   } catch (const std::exception& e) {
     RCLCPP_WARN(rclcpp::get_logger("DhAg95Hardware"), "write failed: %s", e.what());
     return hardware_interface::return_type::ERROR;
+  }
+}
+
+void DhAg95Hardware::polling_loop() {
+  while (polling_running_.load(std::memory_order_relaxed)) {
+    {
+      std::lock_guard<std::mutex> lock(gripper_mutex_);
+      try {
+        int pos_pct = gripper_->get_position();
+        int force_pct = gripper_->get_force();
+
+        cached_position_.store(
+            dh_ag95::position_percent_to_radians(
+                pos_pct < 0 ? 0.0 : pos_pct, model_params_),
+            std::memory_order_relaxed);
+        cached_effort_.store(
+            dh_ag95::force_percent_to_newtons(
+                static_cast<double>(force_pct < 0 ? 0 : force_pct), model_params_),
+            std::memory_order_relaxed);
+      } catch (const std::exception& e) {
+        RCLCPP_WARN(rclcpp::get_logger("DhAg95Hardware"),
+                    "polling read failed: %s", e.what());
+      }
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(polling_interval_ms_));
   }
 }
 

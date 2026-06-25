@@ -51,6 +51,7 @@ def _setup(context, *args, **kwargs):
             ' use_fake_hardware:=',LaunchConfiguration('use_fake_hardware'),
             ' rw_rate:=',          LaunchConfiguration('rw_rate'),
             ' command_interval_ms:=', LaunchConfiguration('command_interval_ms'),
+            ' polling_interval_ms:=', LaunchConfiguration('polling_interval_ms'),
         ]
     )
 
@@ -150,6 +151,8 @@ def generate_launch_description():
         DeclareLaunchArgument('rw_rate', default_value='25', description='Read/Write rate'),
         DeclareLaunchArgument('command_interval_ms', default_value='10',
                               description='Minimum interval between CAN commands (ms)'),
+        DeclareLaunchArgument('polling_interval_ms', default_value='50',
+                              description='Background polling interval for position/force cache (ms)'),
 
         OpaqueFunction(function=_setup),
     ])
