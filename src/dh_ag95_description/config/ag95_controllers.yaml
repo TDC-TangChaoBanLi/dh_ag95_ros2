@@ -3,15 +3,9 @@ controller_manager:
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
     dh_ag95_gripper_controller:
-      type: parallel_gripper_action_controller/GripperActionController
-    dh_ag95_hardware_controller:
-      type: dh_ag95_controllers/DhAg95Hardware
+      type: position_controllers/GripperActionController
 
 
 dh_ag95_gripper_controller:
   ros__parameters:
     joint: $(var prefix)gripper_finger1_joint
-
-dh_ag95_hardware_controller:
-  ros__parameters:
-    default: true

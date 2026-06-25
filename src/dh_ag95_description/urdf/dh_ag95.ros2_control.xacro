@@ -1,21 +1,19 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
-  <!-- 
-  本文件支持多种传输类型，包括官方串口、CAN串口、Socket CAN（Linux）、PCAN（Windows）等。
-  你可以通过 'transport_type' 参数选择不同的协议（official_serial、slcan、socketcan、pcanbasic、modbus_rtu(暂不支持)）
-  official_serial 的参数包括： port（串口号）、baudrate（波特率）；
-  slcan 的参数包括： port（串口号）、baudrate（波特率）、can_bitrate（CAN波特率）；
-  socketcan 的参数包括： can_interface（CAN接口）、can_bitrate（CAN波特率）；
-  pcanbasic 的参数包括： pcan_channel（PCAN通道）、pcan_bitrate（PCAN波特率）；
+  <!--
+  本文件支持多种传输类型：官方串口、Socket CAN（Linux）、PCAN（Windows）等。
+  通过 'transport_type' 参数选择协议：official_serial、socketcan、pcanbasic、modbus_rtu（预留）。
+  official_serial: port（串口号）、baudrate（波特率）；
+  socketcan: can_interface（CAN接口）、can_bitrate（CAN波特率）；
+  pcanbasic: pcan_channel（PCAN通道）、pcan_bitrate（PCAN波特率）。
   -->
 
-  <!-- 
-  This module supports various transport types, including official serial, slcan, SocketCAN (Linux), and PCAN (Windows). 
-  You can select different protocols using the 'transport_type' parameter (options: official_serial, slcan, socketcan, pcanbasic, modbus_rtu [not currently supported]).
-  Parameters for 'official_serial' include: port, baudrate;
-  Parameters for 'slcan' include: port, baudrate, can_bitrate;
-  Parameters for 'socketcan' include: can_interface, can_bitrate;
-  Parameters for 'pcanbasic' include: pcan_channel, pcan_bitrate;
+  <!--
+  Supported transport types: official_serial, socketcan, pcanbasic, modbus_rtu (placeholder).
+  Select via the 'transport_type' parameter.
+  official_serial: port, baudrate;
+  socketcan: can_interface, can_bitrate;
+  pcanbasic: pcan_channel, pcan_bitrate.
   -->
 
   <xacro:macro name="dh_ag95_ros2_control" params="
@@ -30,11 +28,11 @@
       pcan_channel:=PCAN_USBBUS1
       pcan_bitrate:=500000
       gripper_id:=1
-      command_unit:=normalized
-      stroke_m:=0.095
+      gripper_model:=ag-160-95
       default_force_percent:=30
       auto_initialize:=true
-      rw_rate:=50">
+      rw_rate:=50
+      command_interval_ms:=10">
 
     <xacro:if value="${use_fake_hardware}">
       <ros2_control name="${name}" type="system">
@@ -55,11 +53,11 @@
         <joint name="${prefix}gripper_finger1_joint">
           <command_interface name="position">
             <param name="min">0.0</param>
-            <param name="max">1.0</param>
+            <param name="max">0.65</param>
           </command_interface>
           <command_interface name="effort">
-            <param name="min">20.0</param>
-            <param name="max">100.0</param>
+            <param name="min">0.0</param>
+            <param name="max">160.0</param>
           </command_interface>
           <state_interface name="position"/>
           <state_interface name="velocity"/>
@@ -72,27 +70,27 @@
         <hardware>
           <plugin>dh_ag95_controllers/DhAg95Hardware</plugin>
           <param name="transport_type">${transport_type}</param>
-          <param name="port">${port}</param>
-          <param name="baudrate">${baudrate}</param>
+          <param name="serial_port">${serial_port}</param>
+          <param name="serial_baudrate">${serial_baudrate}</param>
           <param name="can_interface">${can_interface}</param>
           <param name="can_bitrate">${can_bitrate}</param>
           <param name="pcan_channel">${pcan_channel}</param>
           <param name="pcan_bitrate">${pcan_bitrate}</param>
           <param name="gripper_id">${gripper_id}</param>
-          <param name="command_unit">${command_unit}</param>
-          <param name="stroke_m">${stroke_m}</param>
+          <param name="gripper_model">${gripper_model}</param>
           <param name="default_force_percent">${default_force_percent}</param>
           <param name="auto_initialize">${auto_initialize}</param>
+          <param name="command_interval_ms">${command_interval_ms}</param>
         </hardware>
 
         <joint name="${prefix}gripper_finger1_joint">
           <command_interface name="position">
             <param name="min">0.0</param>
-            <param name="max">1.0</param>
+            <param name="max">0.65</param>
           </command_interface>
           <command_interface name="effort">
-            <param name="min">20.0</param>
-            <param name="max">100.0</param>
+            <param name="min">0.0</param>
+            <param name="max">160.0</param>
           </command_interface>
           <state_interface name="position"/>
           <state_interface name="velocity"/>

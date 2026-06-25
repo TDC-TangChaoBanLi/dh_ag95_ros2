@@ -1,13 +1,45 @@
+# AG-95 node configuration — pcanbasic transport
+# 参数名与 ag95_node.cpp 的 declare_parameters() 完全对齐。
 dh_ag95_node:
   ros__parameters:
-    topic_prefix: dh_ag95
-    service_prefix: ''
+    # --- 名称类（留空则自动派生）---
+    namespace: ""
+    state_pub_topic_name: ""
+    drop_pub_topic_name: ""
+    command_sub_topic_name: ""
+    command_service_prefix_name: ""
+    command_action_name: ""
+
+    # --- 接口开关 ---
+    is_launch_command_topic: false
+    is_launch_command_service: true
+    is_launch_command_action: true
+
+    # --- 硬件与通信 ---
     gripper_id: 1
     transport_type: pcanbasic
+
+    # pcanbasic 专用
     pcan_channel: PCAN_USBBUS1
     pcan_bitrate: 500000
+
+    # 以下为其他 transport 的参数（pcanbasic 不使用，保默认值即可）
+    serial_port: /dev/ttyACM0
+    serial_baudrate: 115200
+    can_interface: can0
+    can_bitrate: 500000
+
+    # 命令与超时
     command_interval_ms: 30
     read_timeout_ms: 200
     auto_initialize: false
     default_force_percent: 30
     feedback_rate_hz: 20.0
+    command_rate_hz: 20.0
+    action_timeout_sec: 3.0
+
+    # 驱动高级配置
+    max_retries: 2
+    wait_write_echo: true
+    skip_duplicate_writes: true
+

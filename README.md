@@ -26,7 +26,6 @@ third_party/dh_ag95_core_driver  standalone C++/Python core driver
 
 - `official_serial`: DH official USB protocol converter. Sends `FF FE FD FC + ID + 8-byte CAN payload + FB` over a virtual serial port.
 - `socketcan`: Linux SocketCAN. Use this for ordinary USB-CAN devices exposed as `can0`, including PEAK PCAN on Linux when using the kernel SocketCAN driver.
-- `slcan`: SLCAN ASCII serial CAN adapter.
 - `pcanbasic`: PEAK PCAN-Basic backend. Use this when your USB-to-CAN appears as **PCAN**, especially on Windows.
 - `modbus_rtu`: reserved placeholder; not implemented yet.
 

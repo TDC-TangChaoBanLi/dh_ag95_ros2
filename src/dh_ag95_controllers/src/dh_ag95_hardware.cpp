@@ -13,7 +13,6 @@ namespace {
 dh_ag95::TransportType transport_from_string(const std::string& s) {
   if (s == "official_serial") return dh_ag95::TransportType::OfficialSerial;
   if (s == "socketcan") return dh_ag95::TransportType::SocketCan;
-  if (s == "slcan") return dh_ag95::TransportType::Slcan;
   if (s == "pcanbasic") return dh_ag95::TransportType::PcanBasic;
   if (s == "modbus_rtu") return dh_ag95::TransportType::ModbusRtu;
   throw std::invalid_argument("unknown transport_type: " + s);
@@ -25,10 +24,8 @@ hardware_interface::CallbackReturn DhAg95Hardware::on_init(const hardware_interf
     return hardware_interface::CallbackReturn::ERROR;
   }
   joint_name_ = param("joint_name", info_.joints.empty() ? "dh_ag95_finger_joint" : info_.joints[0].name);
-  command_unit_ = param("command_unit", "normalized");
-  stroke_m_ = param_double("stroke_m", 0.095);
-  invert_position_ = param_bool("invert_position", false);
-  write_deadband_ = param_double("write_deadband", 0.01);
+  model_params_ = dh_ag95::get_gripper_params(param("gripper_model", "ag-160-95"));
+  write_deadband_ = param_double("write_deadband", 0.005);
   default_force_percent_ = param_int("default_force_percent", 30);
   cmd_effort_ = default_force_percent_;
   gripper_ = std::make_unique<dh_ag95::Ag95Gripper>(make_config_from_info());
@@ -50,16 +47,19 @@ dh_ag95::Ag95Config DhAg95Hardware::make_config_from_info() {
   cfg.command_interval = std::chrono::milliseconds(param_int("command_interval_ms", 30));
   cfg.read_timeout = std::chrono::milliseconds(param_int("read_timeout_ms", 200));
   cfg.auto_initialize = false;
+  cfg.gripper_model = param("gripper_model", "ag-160-95");
   cfg.default_force_percent = default_force_percent_;
+  cfg.max_retries = param_int("max_retries", 2);
+  cfg.wait_write_echo = param_bool("wait_write_echo", true);
+  cfg.skip_duplicate_writes = param_bool("skip_duplicate_writes", true);
   cfg.official_serial.port = param("serial_port", "/dev/ttyACM0");
   cfg.official_serial.baudrate = param_int("serial_baudrate", 115200);
-  cfg.slcan.port = param("serial_port", "/dev/ttyUSB0");
-  cfg.slcan.serial_baudrate = param_int("serial_baudrate", 115200);
-  cfg.slcan.can_bitrate = param_int("can_bitrate", 500000);
   cfg.socketcan.interface_name = param("can_interface", "can0");
   cfg.socketcan.bitrate = param_int("can_bitrate", 500000);
   cfg.pcanbasic.channel = param("pcan_channel", "PCAN_USBBUS1");
   cfg.pcanbasic.bitrate = param_int("pcan_bitrate", param_int("can_bitrate", 500000));
+  cfg.modbus_rtu.port = param("serial_port", "/dev/ttyUSB0");
+  cfg.modbus_rtu.baudrate = param_int("serial_baudrate", 115200);
   return cfg;
 }
 
@@ -83,8 +83,8 @@ hardware_interface::CallbackReturn DhAg95Hardware::on_activate(const rclcpp_life
     gripper_->connect();
     if (param_bool("auto_initialize", true)) gripper_->initialize(true);
     if (default_force_percent_ > 0) gripper_->set_force(default_force_percent_);
-    auto st = gripper_->read_state();
-    hw_position_ = percent_to_command_unit(st.position_percent < 0 ? 0.0 : st.position_percent);
+    int pos = gripper_->get_position();
+    hw_position_ = dh_ag95::position_percent_to_radians(pos < 0 ? 0.0 : pos, model_params_);
     cmd_position_ = hw_position_;
     return hardware_interface::CallbackReturn::SUCCESS;
   } catch (const std::exception& e) {
@@ -98,30 +98,18 @@ hardware_interface::CallbackReturn DhAg95Hardware::on_deactivate(const rclcpp_li
   return hardware_interface::CallbackReturn::SUCCESS;
 }
 
-double DhAg95Hardware::percent_to_command_unit(double percent) const {
-  if (invert_position_) percent = 100.0 - percent;
-  if (command_unit_ == "percent") return percent;
-  if (command_unit_ == "meter") return percent / 100.0 * stroke_m_;
-  return percent / 100.0;
-}
-
-int DhAg95Hardware::command_unit_to_percent(double command) const {
-  double percent = 0.0;
-  if (command_unit_ == "percent") percent = command;
-  else if (command_unit_ == "meter") percent = command / stroke_m_ * 100.0;
-  else percent = command * 100.0;
-  if (invert_position_) percent = 100.0 - percent;
-  percent = std::clamp(percent, 0.0, 100.0);
-  return static_cast<int>(std::round(percent));
-}
-
 hardware_interface::return_type DhAg95Hardware::read(const rclcpp::Time&, const rclcpp::Duration&) {
   try {
-    auto st = gripper_->read_state();
+    // Lightweight read: only position + force (2 CAN transactions vs 5 in get_all_state).
+    int pos_percent = gripper_->get_position();
+    int force_percent = gripper_->get_force();
+
     double old = hw_position_;
-    hw_position_ = percent_to_command_unit(st.position_percent < 0 ? 0.0 : st.position_percent);
+    hw_position_ = dh_ag95::position_percent_to_radians(
+        pos_percent < 0 ? 0.0 : pos_percent, model_params_);
     hw_velocity_ = hw_position_ - old;
-    hw_effort_ = st.force_internal_percent;
+    hw_effort_ = dh_ag95::force_percent_to_newtons(
+        static_cast<double>(force_percent < 0 ? 0 : force_percent), model_params_);
     return hardware_interface::return_type::OK;
   } catch (const std::exception& e) {
     RCLCPP_WARN(rclcpp::get_logger("DhAg95Hardware"), "read failed: %s", e.what());
@@ -131,12 +119,21 @@ hardware_interface::return_type DhAg95Hardware::read(const rclcpp::Time&, const 
 
 hardware_interface::return_type DhAg95Hardware::write(const rclcpp::Time&, const rclcpp::Duration&) {
   try {
-    int force = static_cast<int>(std::round(std::clamp(cmd_effort_, 20.0, 100.0)));
-    int percent = command_unit_to_percent(cmd_position_);
-    if (std::abs(cmd_position_ - last_cmd_position_) > write_deadband_) {
-      gripper_->set_force(force);
-      gripper_->set_position(percent);
-      last_cmd_position_ = cmd_position_;
+    int force_pct = static_cast<int>(std::round(
+        dh_ag95::force_newtons_to_percent(cmd_effort_, model_params_)));
+    int percent = static_cast<int>(std::round(
+        dh_ag95::position_radians_to_percent(cmd_position_, model_params_)));
+    bool pos_changed = std::abs(cmd_position_ - last_cmd_position_) > write_deadband_;
+    bool force_changed = std::abs(cmd_effort_ - last_cmd_effort_) > 0.5;
+    if (pos_changed || force_changed) {
+      if (force_changed && force_pct >= 20) {
+        gripper_->set_force(force_pct);
+        last_cmd_effort_ = cmd_effort_;
+      }
+      if (pos_changed) {
+        gripper_->set_position(percent);
+        last_cmd_position_ = cmd_position_;
+      }
     }
     return hardware_interface::return_type::OK;
   } catch (const std::exception& e) {

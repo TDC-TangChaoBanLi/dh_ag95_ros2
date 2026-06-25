@@ -4,10 +4,10 @@ project(dh_ag95_msgs)
 find_package(ament_cmake REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(control_msgs REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/State.msg"
-  "msg/Command.msg"
   "msg/DropEvent.msg"
   "srv/Initialize.srv"
   "srv/SetPosition.srv"
@@ -20,8 +20,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/SetDropDetection.srv"
   "srv/GetFirmwareVersion.srv"
   "srv/RawRegister.srv"
-  "action/MoveGripper.action"
-  DEPENDENCIES std_msgs
+  DEPENDENCIES std_msgs control_msgs
 )
 
 ament_export_dependencies(rosidl_default_runtime)

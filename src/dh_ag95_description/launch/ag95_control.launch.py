@@ -33,8 +33,6 @@ def _setup(context, *args, **kwargs):
     controllers_active = ["joint_state_broadcaster"]
     controllers_inactive = []
     controllers_active.append("dh_ag95_gripper_controller")
-    if not use_fake_hardware:
-        controllers_active.append("dh_ag95_hardware_controller")
 
     robot_description_content = Command(
         [
@@ -50,9 +48,9 @@ def _setup(context, *args, **kwargs):
             ' pcan_channel:=',     LaunchConfiguration('pcan_channel'),
             ' pcan_bitrate:=',     LaunchConfiguration('pcan_bitrate'),
             ' gripper_id:=',       LaunchConfiguration('gripper_id'),
-            ' command_unit:=',     LaunchConfiguration('command_unit'),
             ' use_fake_hardware:=',LaunchConfiguration('use_fake_hardware'),
             ' rw_rate:=',          LaunchConfiguration('rw_rate'),
+            ' command_interval_ms:=', LaunchConfiguration('command_interval_ms'),
         ]
     )
 
@@ -136,7 +134,7 @@ def generate_launch_description():
 
         # --- Hardware transport ---
         DeclareLaunchArgument('transport_type', default_value='socketcan',
-                              description='official_serial / socketcan / slcan / pcanbasic / modbus_rtu'),
+                              description='official_serial / socketcan / pcanbasic / modbus_rtu'),
         DeclareLaunchArgument('serial_port',     default_value='/dev/ttyACM0'),
         DeclareLaunchArgument('serial_baudrate',  default_value='115200'),
         DeclareLaunchArgument('can_interface',  default_value='can0'),
@@ -144,13 +142,14 @@ def generate_launch_description():
         DeclareLaunchArgument('pcan_channel',   default_value='PCAN_USBBUS1'),
         DeclareLaunchArgument('pcan_bitrate',   default_value='500000'),
         DeclareLaunchArgument('gripper_id',     default_value='1'),
-        DeclareLaunchArgument('command_unit',   default_value='normalized'),
 
         # --- Simulation / fake hardware ---
         DeclareLaunchArgument('use_fake_hardware', default_value='false',
                               description='Use mock_components/GenericSystem instead of real hardware'),
         DeclareLaunchArgument('launch_rviz', default_value='true'),
-        DeclareLaunchArgument('rw_rate', default_value='50', description='Read/Write rate'),
+        DeclareLaunchArgument('rw_rate', default_value='25', description='Read/Write rate'),
+        DeclareLaunchArgument('command_interval_ms', default_value='10',
+                              description='Minimum interval between CAN commands (ms)'),
 
         OpaqueFunction(function=_setup),
     ])

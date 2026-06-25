@@ -10,12 +10,12 @@
   <xacro:arg name="pcan_channel" default="PCAN_USBBUS1"/>
   <xacro:arg name="pcan_bitrate" default="500000"/>
   <xacro:arg name="gripper_id" default="1"/>
-  <xacro:arg name="command_unit" default="normalized"/>
-  <xacro:arg name="stroke_m" default="0.095"/>
+  <xacro:arg name="gripper_model" default="ag-160-95"/>
   <xacro:arg name="default_force_percent" default="30"/>
   <xacro:arg name="auto_initialize" default="true"/>
   <xacro:arg name="use_fake_hardware" default="false"/>
   <xacro:arg name="rw_rate" default="50"/>
+  <xacro:arg name="command_interval_ms" default="10"/>
 
   <xacro:include filename="$(find dh_ag95_description)/urdf/dh_ag95_macro.urdf.xacro"/>
   <xacro:include filename="$(find dh_ag95_description)/urdf/dh_ag95.ros2_control.xacro"/>
@@ -44,9 +44,9 @@
     pcan_channel="$(arg pcan_channel)"
     pcan_bitrate="$(arg pcan_bitrate)"
     gripper_id="$(arg gripper_id)"
-    command_unit="$(arg command_unit)"
-    stroke_m="$(arg stroke_m)"
+    gripper_model="$(arg gripper_model)"
     default_force_percent="$(arg default_force_percent)"
     auto_initialize="$(arg auto_initialize)"
-    rw_rate="$(arg rw_rate)"/>
+    rw_rate="$(arg rw_rate)"
+    command_interval_ms="$(arg command_interval_ms)"/>
 </robot>
