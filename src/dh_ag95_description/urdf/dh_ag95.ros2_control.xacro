@@ -19,9 +19,10 @@
   gripper_model: gripper model name, now only support ag-160-95.
   default_force_percent: default force percent, range [0, 100] percent.
   auto_initialize: auto initialize the gripper when the controller is started.
-  rw_rate: controller read/write rate in Hz.
+  wait_write_echo: if to wait for the echo of the write command.
   command_interval_ms: minimum interval between CAN commands (ms).
   polling_interval_ms: minimum interval between polling states by CAN (ms).
+  rw_rate: controller read/write rate in Hz.
   -->
 
   <xacro:macro name="dh_ag95_ros2_control" params="
@@ -39,9 +40,10 @@
       gripper_model:=ag-160-95
       default_force_percent:=30
       auto_initialize:=true
-      rw_rate:=30
+      wait_write_echo:=false
       command_interval_ms:=10
-      polling_interval_ms:=50">
+      polling_interval_ms:=50
+      rw_rate:=30">
 
     <xacro:if value="${use_fake_hardware}">
       <ros2_control name="${name}" type="system">
@@ -89,6 +91,7 @@
           <param name="gripper_model">${gripper_model}</param>
           <param name="default_force_percent">${default_force_percent}</param>
           <param name="auto_initialize">${auto_initialize}</param>
+          <param name="wait_write_echo">${wait_write_echo}</param>
           <param name="command_interval_ms">${command_interval_ms}</param>
           <param name="polling_interval_ms">${polling_interval_ms}</param>
         </hardware>

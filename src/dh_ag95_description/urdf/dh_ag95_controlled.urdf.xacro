@@ -14,9 +14,10 @@
   <xacro:arg name="default_force_percent" default="30"/>
   <xacro:arg name="auto_initialize" default="true"/>
   <xacro:arg name="use_fake_hardware" default="false"/>
-  <xacro:arg name="rw_rate" default="50"/>
+  <xacro:arg name="wait_write_echo" default="false"/>
   <xacro:arg name="command_interval_ms" default="10"/>
   <xacro:arg name="polling_interval_ms" default="50"/>
+  <xacro:arg name="rw_rate" default="30"/>
 
   <xacro:include filename="$(find dh_ag95_description)/urdf/dh_ag95_macro.urdf.xacro"/>
   <xacro:include filename="$(find dh_ag95_description)/urdf/dh_ag95.ros2_control.xacro"/>
@@ -48,7 +49,8 @@
     gripper_model="$(arg gripper_model)"
     default_force_percent="$(arg default_force_percent)"
     auto_initialize="$(arg auto_initialize)"
-    rw_rate="$(arg rw_rate)"
+    wait_write_echo="$(arg wait_write_echo)"
     command_interval_ms="$(arg command_interval_ms)"
-    polling_interval_ms="$(arg polling_interval_ms)"/>
+    polling_interval_ms="$(arg polling_interval_ms)"
+    rw_rate="$(arg rw_rate)"/>
 </robot>

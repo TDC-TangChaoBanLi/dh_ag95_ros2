@@ -58,7 +58,7 @@ dh_ag95::Ag95Config DhAg95Hardware::make_config_from_info() {
   cfg.gripper_model = param("gripper_model", "ag-160-95");
   cfg.default_force_percent = default_force_percent_;
   cfg.max_retries = param_int("max_retries", 2);
-  cfg.wait_write_echo = param_bool("wait_write_echo", true);
+  cfg.wait_write_echo = param_bool("wait_write_echo", false);
   cfg.skip_duplicate_writes = param_bool("skip_duplicate_writes", true);
   cfg.official_serial.port = param("serial_port", "/dev/ttyACM0");
   cfg.official_serial.baudrate = param_int("serial_baudrate", 115200);
