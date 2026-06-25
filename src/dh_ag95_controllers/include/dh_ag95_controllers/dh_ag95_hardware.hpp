@@ -2,7 +2,6 @@
 
 #include <atomic>
 #include <memory>
-#include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
@@ -17,6 +16,13 @@
 #include "dh_ag95/gripper_model.hpp"
 
 namespace dh_ag95_controllers {
+
+/// Atomic pending command posted by write() and consumed by polling_loop().
+struct PendingWrite {
+  std::atomic<bool> dirty{false};
+  std::atomic<int> position_percent{-1};  ///< -1 = no pending position write, 0..100 = target
+  std::atomic<int> force_percent{-1};     ///< -1 = no pending force write,    20..100 = target
+};
 
 class DhAg95Hardware : public hardware_interface::ActuatorInterface {
  public:
@@ -37,8 +43,9 @@ class DhAg95Hardware : public hardware_interface::ActuatorInterface {
   int param_int(const std::string& key, int fallback) const;
   bool param_bool(const std::string& key, bool fallback) const;
 
-  /// Background polling loop: reads position + force from hardware,
-  /// stores results in atomic cache variables for lock-free read().
+  /// Background polling loop: processes pending writes, then reads
+  /// position + force from hardware, stores results in atomic caches.
+  /// This is the ONLY thread that accesses gripper_ after activation.
   void polling_loop();
 
   std::unique_ptr<dh_ag95::Ag95Gripper> gripper_;
@@ -60,8 +67,8 @@ class DhAg95Hardware : public hardware_interface::ActuatorInterface {
   std::atomic<double> cached_position_{0.0};
   std::atomic<double> cached_effort_{0.0};
 
-  /// Serialises access to gripper_ between write() and polling_loop().
-  std::mutex gripper_mutex_;
+  /// Atomic pending command posted by write(), consumed by polling_loop().
+  PendingWrite pending_write_;
 
   /// Background polling thread.  Started in on_activate(), joined in on_deactivate().
   std::thread polling_thread_;

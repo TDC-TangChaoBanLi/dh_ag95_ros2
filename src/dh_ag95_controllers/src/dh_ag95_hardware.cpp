@@ -137,49 +137,52 @@ hardware_interface::return_type DhAg95Hardware::write(const rclcpp::Time&, const
     return hardware_interface::return_type::OK;
   }
 
-  // try_lock: if the polling thread holds gripper_mutex_, skip this cycle.
-  // The write will be retried next cycle when the values haven't changed yet.
-  std::unique_lock<std::mutex> lock(gripper_mutex_, std::try_to_lock);
-  if (!lock.owns_lock()) {
-    return hardware_interface::return_type::OK;
+  // Atomically post pending commands.  polling_loop() executes the actual
+  // blocking I/O (enforce_interval + CAN send) in its own thread.
+  if (force_changed && force_pct >= 20) {
+    pending_write_.force_percent.store(force_pct, std::memory_order_relaxed);
+    last_cmd_effort_ = cmd_effort_;  // suppress re-trigger until next controller command
   }
-
-  try {
-    if (force_changed && force_pct >= 20) {
-      gripper_->set_force(force_pct);
-      last_cmd_effort_ = cmd_effort_;
-    }
-    if (pos_changed) {
-      gripper_->set_position(percent);
-      last_cmd_position_ = cmd_position_;
-    }
-    return hardware_interface::return_type::OK;
-  } catch (const std::exception& e) {
-    RCLCPP_WARN(rclcpp::get_logger("DhAg95Hardware"), "write failed: %s", e.what());
-    return hardware_interface::return_type::ERROR;
+  if (pos_changed) {
+    pending_write_.position_percent.store(percent, std::memory_order_relaxed);
+    last_cmd_position_ = cmd_position_;
   }
+  pending_write_.dirty.store(true, std::memory_order_release);
+  return hardware_interface::return_type::OK;
 }
 
 void DhAg95Hardware::polling_loop() {
   while (polling_running_.load(std::memory_order_relaxed)) {
-    {
-      std::lock_guard<std::mutex> lock(gripper_mutex_);
-      try {
-        int pos_pct = gripper_->get_position();
-        int force_pct = gripper_->get_force();
+    try {
+      // --- Process pending writes (if any) before reading ---
+      if (pending_write_.dirty.load(std::memory_order_acquire)) {
+        int pos_pct = pending_write_.position_percent.exchange(-1, std::memory_order_relaxed);
+        int force_pct = pending_write_.force_percent.exchange(-1, std::memory_order_relaxed);
+        pending_write_.dirty.store(false, std::memory_order_release);
 
-        cached_position_.store(
-            dh_ag95::position_percent_to_radians(
-                pos_pct < 0 ? 0.0 : pos_pct, model_params_),
-            std::memory_order_relaxed);
-        cached_effort_.store(
-            dh_ag95::force_percent_to_newtons(
-                static_cast<double>(force_pct < 0 ? 0 : force_pct), model_params_),
-            std::memory_order_relaxed);
-      } catch (const std::exception& e) {
-        RCLCPP_WARN(rclcpp::get_logger("DhAg95Hardware"),
-                    "polling read failed: %s", e.what());
+        if (force_pct >= 20) {
+          gripper_->set_force(force_pct);
+        }
+        if (pos_pct >= 0) {
+          gripper_->set_position(pos_pct);
+        }
       }
+
+      // --- Read current state ---
+      int pos_pct = gripper_->get_position();
+      int force_pct = gripper_->get_force();
+
+      cached_position_.store(
+          dh_ag95::position_percent_to_radians(
+              pos_pct < 0 ? 0.0 : pos_pct, model_params_),
+          std::memory_order_relaxed);
+      cached_effort_.store(
+          dh_ag95::force_percent_to_newtons(
+              static_cast<double>(force_pct < 0 ? 0 : force_pct), model_params_),
+          std::memory_order_relaxed);
+    } catch (const std::exception& e) {
+      RCLCPP_WARN(rclcpp::get_logger("DhAg95Hardware"),
+                  "polling error: %s", e.what());
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(polling_interval_ms_));
   }
